@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Virtual Number Spinner</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-light: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #10b981;
+      --border: #334155;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      overflow-x: hidden;
+    }
+
+    header {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 8px;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface-light);
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 768px) {
+      .app-container {
+        grid-template-columns: 1.15fr 0.85fr;
+        align-items: start;
+      }
+    }
+
+    /* Wheel Section */
+    .wheel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 0 18px;
+      transition: max-width 0.25s ease;
+    }
+
+    canvas#wheelCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: pointer;
+    }
+
+    /* Pointer triangle on right side (0 radians) */
+    .pointer {
+      position: absolute;
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-top: 16px solid transparent;
+      border-bottom: 16px solid transparent;
+      border-right: 28px solid #facc15;
+      filter: drop-shadow(-2px 2px 4px rgba(0,0,0,0.5));
+      z-index: 10;
+      transition: transform 0.08s ease;
+    }
+
+    .pointer.tick {
+      transform: translateY(-50%) rotate(-14deg);
+    }
+
+    .spin-btn {
+      width: 100%;
+      max-width: 300px;
+      padding: 15px 24px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--primary);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      transition: transform 0.1s, background 0.2s;
+    }
+
+    .spin-btn:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .spin-btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    .spin-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .toggle-row {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 300px;
+      background: var(--bg);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+    }
+
+    /* Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--surface-light);
+      transition: .2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--success);
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* CLEAN / RECORDING MODE STYLES */
+    body.clean-mode {
+      justify-content: center;
+    }
+
+    body.clean-mode header,
+    body.clean-mode .controls-card,
+    body.clean-mode .toggle-row {
+      display: none !important;
+    }
+
+    body.clean-mode .app-container {
+      grid-template-columns: 1fr;
+      max-width: 520px;
+    }
+
+    body.clean-mode .wheel-card {
+      background: transparent;
+      border: none;
+      padding: 8px;
+    }
+
+    body.clean-mode .wheel-wrapper {
+      max-width: 440px;
+      margin-bottom: 24px;
+    }
+
+    .exit-clean-btn {
+      display: none;
+      position: fixed;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      right: 18px;
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: var(--text-muted);
+      padding: 7px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 80;
+      transition: opacity 0.2s, color 0.2s;
+    }
+
+    .exit-clean-btn:hover {
+      color: var(--text);
+    }
+
+    body.clean-mode .exit-clean-btn {
+      display: block;
+    }
+
+    /* Controls Section */
+    .controls-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 10px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--surface-light);
+      color: var(--text);
+    }
+
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: var(--text);
+      background: var(--surface-light);
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .action-links {
+      display: flex;
+      gap: 10px;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: #818cf8;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .items-list {
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    .item-badge {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .remove-item-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+
+    .remove-item-btn:hover {
+      color: var(--danger);
+    }
+
+    /* Winner Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      animation: popIn 0.2s ease-out;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .modal-winner {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #facc15;
+      margin: 12px 0 22px;
+      word-break: break-word;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-actions .btn {
+      padding: 13px;
+      font-size: 1rem;
+    }
+
+    canvas#confettiCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 90;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="confettiCanvas"></canvas>
+
+  <header>
+    <h1>🎡 Number Spinner</h1>
+    <div class="header-actions">
+      <button id="cleanModeBtn" class="icon-btn" title="Hide controls for recording">🎥 Clean View</button>
+      <button id="soundToggle" class="icon-btn" aria-label="Toggle Sound">🔊 Sound</button>
+    </div>
+  </header>
+
+  <button id="exitCleanBtn" class="exit-clean-btn">✕ Exit Clean View</button>
+
+  <main class="app-container">
+    <!-- Left: Wheel -->
+    <section class="wheel-card">
+      <div class="wheel-wrapper">
+        <div id="pointer" class="pointer"></div>
+        <canvas id="wheelCanvas"></canvas>
+      </div>
+
+      <button id="spinBtn" class="spin-btn">Spin Wheel</button>
+
+      <div class="toggle-row">
+        <span>Auto-remove landed number</span>
+        <label class="switch">
+          <input type="checkbox" id="autoRemoveToggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Right: Customization & List -->
+    <section class="controls-card">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="listTab">Numbers (<span id="countBadge">10</span>)</button>
+        <button class="tab-btn" data-tab="rangeTab">Range / Bulk</button>
+        <button class="tab-btn" data-tab="historyTab">History (<span id="historyBadge">0</span>)</button>
+      </div>
+
+      <!-- Tab 1: Active Numbers -->
+      <div id="listTab" class="tab-panel active">
+        <div class="input-group">
+          <input type="text" id="newItemInput" placeholder="Add number or label..." />
+          <button id="addItemBtn" class="btn btn-primary">Add</button>
+        </div>
+
+        <div class="list-header">
+          <span>Active Wheel Items</span>
+          <div class="action-links">
+            <button id="shuffleBtn" class="link-btn">Shuffle</button>
+            <button id="restoreBtn" class="link-btn">Restore All</button>
+          </div>
+        </div>
+
+        <div id="itemsList" class="items-list"></div>
+      </div>
+
+      <!-- Tab 2: Range & Bulk Edit -->
+      <div id="rangeTab" class="tab-panel">
+        <label style="font-size:0.85rem; color:var(--text-muted);">Quick Presets</label>
+        <div class="preset-grid">
+          <button class="btn preset-btn" data-start="1" data-end="6">1 – 6</button>
+          <button class="btn preset-btn" data-start="1" data-end="10">1 – 10</button>
+          <button class="btn preset-btn" data-start="1" data-end="20">1 – 20</button>
+          <button class="btn preset-btn" data-start="1" data-end="50">1 – 50</button>
+          <button class="btn preset-btn" data-start="1" data-end="75">1 – 75</button>
+          <button class="btn preset-btn" data-start="1" data-end="100">1 – 100</button>
+        </div>
+
+        <label style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">Custom Number Range</label>
+        <div class="input-group">
+          <input type="number" id="rangeStart" value="1" placeholder="Start" />
+          <input type="number" id="rangeEnd" value="15" placeholder="End" />
+          <button id="applyRangeBtn" class="btn btn-primary">Set</button>
+        </div>
+
+        <label style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">Bulk Edit (comma or new line separated)</label>
+        <textarea id="bulkTextarea" placeholder="1, 2, 3, 4, 5"></textarea>
+        <button id="applyBulkBtn" class="btn btn-primary">Update Wheel from Text</button>
+      </div>
+
+      <!-- Tab 3: History -->
+      <div id="historyTab" class="tab-panel">
+        <div class="list-header">
+          <span>Landed Numbers</span>
+          <button id="clearHistoryBtn" class="link-btn">Clear History</button>
+        </div>
+        <div id="historyList" class="items-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Result Modal -->
+  <div id="winnerModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-subtitle">Landed On</div>
+      <div id="winnerText" class="modal-winner">7</div>
+      <div class="modal-actions">
+        <button id="removeWinnerBtn" class="btn btn-danger">Remove Number & Continue</button>
+        <button id="keepWinnerBtn" class="btn btn-primary">Keep Number</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- State ---
+    const PALETTE = [
+      "#ef4444", "#f97316", "#f59e0b", "#10b981",
+      "#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6",
+      "#ec4899", "#14b8a6"
+    ];
+
+    let items = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+    let initialItems = [...items];
+    let history = [];
+    let currentAngle = 0;
+    let angularVelocity = 0;
+    let isSpinning = false;
+    let lastSliceIndex = -1;
+    let selectedWinnerIndex = -1;
+    let soundEnabled = true;
+
+    // --- DOM Elements ---
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    const pointer = document.getElementById("pointer");
+    const spinBtn = document.getElementById("spinBtn");
+    const autoRemoveToggle = document.getElementById("autoRemoveToggle");
+    const soundToggle = document.getElementById("soundToggle");
+    const cleanModeBtn = document.getElementById("cleanModeBtn");
+    const exitCleanBtn = document.getElementById("exitCleanBtn");
+
+    const itemsList = document.getElementById("itemsList");
+    const historyList = document.getElementById("historyList");
+    const countBadge = document.getElementById("countBadge");
+    const historyBadge = document.getElementById("historyBadge");
+    const bulkTextarea = document.getElementById("bulkTextarea");
+
+    const winnerModal = document.getElementById("winnerModal");
+    const winnerText = document.getElementById("winnerText");
+    const removeWinnerBtn = document.getElementById("removeWinnerBtn");
+    const keepWinnerBtn = document.getElementById("keepWinnerBtn");
+
+    // --- Clean / Recording Mode ---
+    function toggleCleanMode(forceState) {
+      const next = typeof forceState === "boolean"
+        ? forceState
+        : !document.body.classList.contains("clean-mode");
+      document.body.classList.toggle("clean-mode", next);
+      setTimeout(resizeCanvas, 50);
+    }
+
+    cleanModeBtn.addEventListener("click", () => toggleCleanMode(true));
+    exitCleanBtn.addEventListener("click", () => toggleCleanMode(false));
+
+    // --- Web Audio API Synthesizer ---
+    let audioCtx = null;
+
+    function playTick() {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(650, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.035);
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.035);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+      } catch (e) {}
+    }
+
+    function playWinSound() {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          const start = audioCtx.currentTime + i * 0.08;
+          gain.gain.setValueAtTime(0.15, start);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + 0.36);
+        });
+      } catch (e) {}
+    }
+
+    // --- Canvas & Wheel Rendering ---
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawWheel();
+    }
+
+    function drawWheel() {
+      const size = canvas.width / (window.devicePixelRatio || 1);
+      const center = size / 2;
+      const radius = center - 6;
+
+      ctx.clearRect(0, 0, size, size);
+
+      if (items.length === 0) {
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#334155";
+        ctx.fill();
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "bold 16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("No items left! Restore or add.", center, center);
+        return;
+      }
+
+      const sliceAngle = (Math.PI * 2) / items.length;
+
+      items.forEach((label, i) => {
+        const startAngle = currentAngle + i * sliceAngle;
+        const endAngle = startAngle + sliceAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(center, center);
+        ctx.arc(center, center, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = PALETTE[i % PALETTE.length];
+        ctx.fill();
+
+        ctx.lineWidth = items.length > 40 ? 0.5 : 1.5;
+        ctx.strokeStyle = "rgba(15, 23, 42, 0.45)";
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(center, center);
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#ffffff";
+
+        const fontSize = Math.max(9, Math.min(22, Math.floor((radius * 1.4) / items.length)));
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.shadowColor = "rgba(0,0,0,0.45)";
+        ctx.shadowBlur = 3;
+
+        const textStr = label.length > 14 ? label.slice(0, 13) + "…" : label;
+        ctx.fillText(textStr, radius - 14, 0);
+        ctx.restore();
+      });
+
+      // Center cap
+      ctx.beginPath();
+      ctx.arc(center, center, Math.max(18, radius * 0.11), 0, Math.PI * 2);
+      ctx.fillStyle = "#0f172a";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#f8fafc";
+      ctx.stroke();
+    }
+
+    // --- Spin Physics ---
+    function getSliceAtPointer() {
+      if (items.length === 0) return -1;
+      const sliceAngle = (Math.PI * 2) / items.length;
+      const normalized = (Math.PI * 2 - (currentAngle % (Math.PI * 2))) % (Math.PI * 2);
+      return Math.floor(normalized / sliceAngle) % items.length;
+    }
+
+    function spin() {
+      if (isSpinning || items.length === 0) return;
+      isSpinning = true;
+      spinBtn.disabled = true;
+      angularVelocity = 0.35 + Math.random() * 0.25;
+      lastSliceIndex = getSliceAtPointer();
+      requestAnimationFrame(animateSpin);
+    }
+
+    function animateSpin() {
+      if (!isSpinning) return;
+
+      currentAngle = (currentAngle + angularVelocity) % (Math.PI * 2);
+      angularVelocity *= 0.985;
+
+      const currentSlice = getSliceAtPointer();
+      if (currentSlice !== lastSliceIndex) {
+        lastSliceIndex = currentSlice;
+        playTick();
+        pointer.classList.add("tick");
+        setTimeout(() => pointer.classList.remove("tick"), 60);
+      }
+
+      drawWheel();
+
+      if (angularVelocity < 0.0018) {
+        isSpinning = false;
+        angularVelocity = 0;
+        spinBtn.disabled = items.length === 0;
+        handleSpinComplete();
+      } else {
+        requestAnimationFrame(animateSpin);
+      }
+    }
+
+    function handleSpinComplete() {
+      selectedWinnerIndex = getSliceAtPointer();
+      if (selectedWinnerIndex < 0) return;
+
+      const landedValue = items[selectedWinnerIndex];
+      playWinSound();
+      launchConfetti();
+
+      const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      history.unshift({ value: landedValue, time: timeStr });
+      renderHistory();
+
+      if (autoRemoveToggle.checked) {
+        removeAtIndex(selectedWinnerIndex);
+      } else {
+        winnerText.textContent = landedValue;
+        removeWinnerBtn.textContent = `Remove "${landedValue}"`;
+        winnerModal.classList.add("open");
+      }
+    }
+
+    // --- List Management ---
+    function removeAtIndex(idx) {
+      if (idx >= 0 && idx < items.length) {
+        items.splice(idx, 1);
+        syncUI();
+      }
+    }
+
+    function setNewList(newArr) {
+      items = newArr.filter(s => s.trim() !== "");
+      initialItems = [...items];
+      syncUI();
+    }
+
+    function syncUI() {
+      countBadge.textContent = items.length;
+      spinBtn.disabled = items.length === 0 || isSpinning;
+      bulkTextarea.value = items.join(", ");
+      renderItemsList();
+      drawWheel();
+    }
+
+    function renderItemsList() {
+      itemsList.innerHTML = "";
+      items.forEach((item, idx) => {
+        const row = document.createElement("div");
+        row.className = "item-row";
+        row.innerHTML = `
+          <div>
+            <span class="item-badge" style="background:${PALETTE[idx % PALETTE.length]}"></span>
+            <span>${escapeHtml(item)}</span>
+          </div>
+          <button class="remove-item-btn" title="Remove" data-idx="${idx}">✕</button>
+        `;
+        itemsList.appendChild(row);
+      });
+    }
+
+    function renderHistory() {
+      historyBadge.textContent = history.length;
+      historyList.innerHTML = "";
+      if (history.length === 0) {
+        historyList.innerHTML = `<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:16px;">No spins yet.</div>`;
+        return;
+      }
+      history.forEach((entry, i) => {
+        const row = document.createElement("div");
+        row.className = "item-row";
+        row.innerHTML = `
+          <strong>#${history.length - i}: ${escapeHtml(entry.value)}</strong>
+          <span style="color:var(--text-muted);font-size:0.8rem;">${entry.time}</span>
+        `;
+        historyList.appendChild(row);
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // --- Event Listeners ---
+    spinBtn.addEventListener("click", spin);
+    canvas.addEventListener("click", spin);
+
+    soundToggle.addEventListener("click", () => {
+      soundEnabled = !soundEnabled;
+      soundToggle.textContent = soundEnabled ? "🔊 Sound" : "🔇 Muted";
+    });
+
+    // Keyboard shortcuts (Space to spin, H to toggle Clean View)
+    document.addEventListener("keydown", e => {
+      if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (winnerModal.classList.contains("open")) {
+          winnerModal.classList.remove("open");
+        } else {
+          spin();
+        }
+      } else if (e.key.toLowerCase() === "h") {
+        toggleCleanMode();
+      }
+    });
+
+    // Tabs
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // Add single item
+    const newItemInput = document.getElementById("newItemInput");
+    document.getElementById("addItemBtn").addEventListener("click", () => {
+      const val = newItemInput.value.trim();
+      if (val) {
+        items.push(val);
+        initialItems.push(val);
+        newItemInput.value = "";
+        syncUI();
+      }
+    });
+    newItemInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") document.getElementById("addItemBtn").click();
+    });
+
+    // Remove single item from list
+    itemsList.addEventListener("click", e => {
+      const btn = e.target.closest(".remove-item-btn");
+      if (btn) {
+        removeAtIndex(Number(btn.dataset.idx));
+      }
+    });
+
+    // Shuffle & Restore
+    document.getElementById("shuffleBtn").addEventListener("click", () => {
+      for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+      syncUI();
+    });
+
+    document.getElementById("restoreBtn").addEventListener("click", () => {
+      items = [...initialItems];
+      syncUI();
+    });
+
+    // Presets
+    document.querySelectorAll(".preset-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const start = Number(btn.dataset.start);
+        const end = Number(btn.dataset.end);
+        const arr = [];
+        for (let i = start; i <= end; i++) arr.push(String(i));
+        setNewList(arr);
+        document.querySelector('[data-tab="listTab"]').click();
+      });
+    });
+
+    // Custom Range
+    document.getElementById("applyRangeBtn").addEventListener("click", () => {
+      const start = parseInt(document.getElementById("rangeStart").value, 10);
+      const end = parseInt(document.getElementById("rangeEnd").value, 10);
+      if (isNaN(start) || isNaN(end) || start > end || end - start > 500) {
+        alert("Please enter a valid range (max 500 numbers).");
+        return;
+      }
+      const arr = [];
+      for (let i = start; i <= end; i++) arr.push(String(i));
+      setNewList(arr);
+      document.querySelector('[data-tab="listTab"]').click();
+    });
+
+    // Bulk Text
+    document.getElementById("applyBulkBtn").addEventListener("click", () => {
+      const raw = bulkTextarea.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      if (raw.length > 0) {
+        setNewList(raw);
+        document.querySelector('[data-tab="listTab"]').click();
+      }
+    });
+
+    // Clear History
+    document.getElementById("clearHistoryBtn").addEventListener("click", () => {
+      history = [];
+      renderHistory();
+    });
+
+    // Modal Actions
+    removeWinnerBtn.addEventListener("click", () => {
+      removeAtIndex(selectedWinnerIndex);
+      winnerModal.classList.remove("open");
+    });
+
+    keepWinnerBtn.addEventListener("click", () => {
+      winnerModal.classList.remove("open");
+    });
+
+    // --- Confetti Effect ---
+    function launchConfetti() {
+      const cCanvas = document.getElementById("confettiCanvas");
+      const cCtx = cCanvas.getContext("2d");
+      cCanvas.width = window.innerWidth;
+      cCanvas.height = window.innerHeight;
+
+      const particles = Array.from({ length: 75 }, () => ({
+        x: cCanvas.width / 2,
+        y: cCanvas.height / 2,
+        vx: (Math.random() - 0.5) * 14,
+        vy: (Math.random() - 0.7) * 14,
+        size: Math.random() * 7 + 4,
+        color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
+        life: 70
+      }));
+
+      function step() {
+        cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+        let alive = false;
+        particles.forEach(p => {
+          if (p.life > 0) {
+            alive = true;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.35;
+            p.life--;
+            cCtx.fillStyle = p.color;
+            cCtx.fillRect(p.x, p.y, p.size, p.size);
+          }
+        });
+        if (alive) requestAnimationFrame(step);
+        else cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Init
+    window.addEventListener("resize", resizeCanvas);
+    syncUI();
+    renderHistory();
+    resizeCanvas();
+  </script>
+</body>
+</html>
